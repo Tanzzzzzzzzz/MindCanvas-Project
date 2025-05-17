@@ -1,11 +1,12 @@
-import NodeCanvas from "./components/NodeCanvas";
+import React from 'react';
+import NodeCanvas from './components/NodeCanvas';
 
-function App() {
+const App = () => {
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100 p-4">
       <NodeCanvas />
     </div>
   );
-}
+};
 
 export default App;

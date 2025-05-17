@@ -1,79 +1,99 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
+import Draggable from "react-draggable";
 
 const NodeCanvas = () => {
   const [nodes, setNodes] = useState([]);
-  const [nodeIdCounter, setNodeIdCounter] = useState(1);
-  const draggingNodeId = useRef(null);
+  const [nodeId, setNodeId] = useState(1);
 
-  const handleAddNode = () => {
+  const addNode = () => {
     const newNode = {
-      id: nodeIdCounter,
-      x: 100 + nodes.length * 20,
-      y: 100 + nodes.length * 20,
+      id: nodeId,
+      x: 100,
+      y: 100,
+      name: `Node ${nodeId}`,
+      editing: false,
     };
-    setNodes((prev) => [...prev, newNode]);
-    setNodeIdCounter((prev) => prev + 1);
+    setNodes([...nodes, newNode]);
+    setNodeId(nodeId + 1);
   };
 
-  const handleDeleteNode = (id) => {
-    setNodes((prev) => prev.filter((node) => node.id !== id));
+  const deleteNode = (id) => {
+    setNodes(nodes.filter((node) => node.id !== id));
   };
 
-  const handleMouseDown = (e, id) => {
-    draggingNodeId.current = id;
+  const startEditing = (id) => {
+    setNodes(
+      nodes.map((node) =>
+        node.id === id ? { ...node, editing: true } : node
+      )
+    );
   };
 
-  const handleMouseMove = (e) => {
-    if (draggingNodeId.current !== null) {
-      const updatedNodes = nodes.map((node) =>
-        node.id === draggingNodeId.current
-          ? {
-              ...node,
-              x: e.clientX - 60,
-              y: e.clientY - 30,
-            }
+  const stopEditing = (id, newName) => {
+    setNodes(
+      nodes.map((node) =>
+        node.id === id ? { ...node, name: newName, editing: false } : node
+      )
+    );
+  };
+
+  const handleDrag = (e, data, id) => {
+    setNodes(
+      nodes.map((node) =>
+        node.id === id
+          ? { ...node, x: data.x, y: data.y }
           : node
-      );
-      setNodes(updatedNodes);
-    }
-  };
-
-  const handleMouseUp = () => {
-    draggingNodeId.current = null;
+      )
+    );
   };
 
   return (
-    <div
-      className="w-full h-screen bg-gray-100 p-4"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
+    <div className="p-6 bg-gray-100 min-h-screen">
       <button
-        onClick={handleAddNode}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-4"
+        onClick={addNode}
+        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
       >
         Add Node
       </button>
-
-      <div className="relative w-full h-full border border-gray-300 bg-white rounded">
+      <div className="mt-4 relative w-full h-[80vh] bg-white rounded shadow overflow-hidden">
         {nodes.map((node) => (
-          <div
+          <Draggable
             key={node.id}
-            className="absolute w-32 h-16 bg-green-300 rounded shadow-md cursor-move flex items-center justify-between p-2"
-            style={{ left: node.x, top: node.y }}
-            onMouseDown={(e) => handleMouseDown(e, node.id)}
+            position={{ x: node.x, y: node.y }}
+            onDrag={(e, data) => handleDrag(e, data, node.id)}
           >
-            <span className="text-sm font-bold text-gray-800">Node {node.id}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent drag on delete
-                handleDeleteNode(node.id);
-              }}
-              className="ml-2 text-red-600 font-bold hover:text-red-800"
-            >
-              ✕
-            </button>
-          </div>
+            <div className="absolute p-4 bg-green-300 rounded shadow-md min-w-[120px]">
+              <div className="flex justify-between items-center">
+                {node.editing ? (
+                  <input
+                    className="text-sm font-semibold bg-white p-1 rounded w-full"
+                    type="text"
+                    defaultValue={node.name}
+                    autoFocus
+                    onBlur={(e) => stopEditing(node.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        stopEditing(node.id, e.target.value);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-semibold cursor-pointer"
+                    onDoubleClick={() => startEditing(node.id)}
+                  >
+                    {node.name}
+                  </span>
+                )}
+                <button
+                  className="text-red-500 font-bold ml-2"
+                  onClick={() => deleteNode(node.id)}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </Draggable>
         ))}
       </div>
     </div>
