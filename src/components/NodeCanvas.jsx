@@ -1,99 +1,94 @@
 import React, { useState } from "react";
 import Draggable from "react-draggable";
+import Xarrow from "react-xarrows";
 
 const NodeCanvas = () => {
   const [nodes, setNodes] = useState([]);
-  const [nodeId, setNodeId] = useState(1);
+  const [connections, setConnections] = useState([]);
+  const [dragFrom, setDragFrom] = useState(null);
 
   const addNode = () => {
+    const id = "node-" + (nodes.length + 1);
     const newNode = {
-      id: nodeId,
-      x: 100,
-      y: 100,
-      name: `Node ${nodeId}`,
-      editing: false,
+      id,
+      title: "Node " + (nodes.length + 1),
+      x: 100 + nodes.length * 50,
+      y: 100 + nodes.length * 50,
     };
     setNodes([...nodes, newNode]);
-    setNodeId(nodeId + 1);
   };
 
-  const deleteNode = (id) => {
-    setNodes(nodes.filter((node) => node.id !== id));
+  const updatePosition = (id, x, y) => {
+    setNodes(nodes.map(n => n.id === id ? { ...n, x, y } : n));
   };
 
-  const startEditing = (id) => {
-    setNodes(
-      nodes.map((node) =>
-        node.id === id ? { ...node, editing: true } : node
-      )
-    );
+  const handleStartConnection = (id) => {
+    setDragFrom(id);
   };
 
-  const stopEditing = (id, newName) => {
-    setNodes(
-      nodes.map((node) =>
-        node.id === id ? { ...node, name: newName, editing: false } : node
-      )
-    );
-  };
-
-  const handleDrag = (e, data, id) => {
-    setNodes(
-      nodes.map((node) =>
-        node.id === id
-          ? { ...node, x: data.x, y: data.y }
-          : node
-      )
-    );
+  const handleDropConnection = (targetId) => {
+    if (dragFrom && dragFrom !== targetId) {
+      setConnections([...connections, { from: dragFrom, to: targetId }]);
+    }
+    setDragFrom(null);
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div>
       <button
         onClick={addNode}
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded shadow"
       >
         Add Node
       </button>
-      <div className="mt-4 relative w-full h-[80vh] bg-white rounded shadow overflow-hidden">
-        {nodes.map((node) => (
+      <div className="relative w-full h-[80vh] bg-white border rounded">
+        {nodes.map(node => (
           <Draggable
             key={node.id}
             position={{ x: node.x, y: node.y }}
-            onDrag={(e, data) => handleDrag(e, data, node.id)}
+            onStop={(_, data) => updatePosition(node.id, data.x, data.y)}
           >
-            <div className="absolute p-4 bg-green-300 rounded shadow-md min-w-[120px]">
-              <div className="flex justify-between items-center">
-                {node.editing ? (
-                  <input
-                    className="text-sm font-semibold bg-white p-1 rounded w-full"
-                    type="text"
-                    defaultValue={node.name}
-                    autoFocus
-                    onBlur={(e) => stopEditing(node.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        stopEditing(node.id, e.target.value);
-                      }
-                    }}
-                  />
-                ) : (
-                  <span
-                    className="text-sm font-semibold cursor-pointer"
-                    onDoubleClick={() => startEditing(node.id)}
-                  >
-                    {node.name}
-                  </span>
-                )}
+            <div
+              id={node.id}
+              className="absolute p-2 bg-green-300 rounded shadow cursor-move select-none"
+              onClick={() => handleDropConnection(node.id)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <strong>{node.title}</strong>
                 <button
-                  className="text-red-500 font-bold ml-2"
-                  onClick={() => deleteNode(node.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNodes(nodes.filter(n => n.id !== node.id));
+                    setConnections(connections.filter(
+                      c => c.from !== node.id && c.to !== node.id
+                    ));
+                  }}
+                  className="text-red-600 font-bold"
                 >
                   ×
                 </button>
               </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartConnection(node.id);
+                }}
+                className="mt-1 px-2 py-1 bg-blue-600 text-white rounded text-xs"
+              >
+                Connect →
+              </button>
             </div>
           </Draggable>
+        ))}
+        {connections.map((conn, index) => (
+          <Xarrow
+            key={index}
+            start={conn.from}
+            end={conn.to}
+            path="smooth"
+            strokeWidth={2}
+            color="black"
+          />
         ))}
       </div>
     </div>
