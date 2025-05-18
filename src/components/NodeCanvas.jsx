@@ -1,94 +1,123 @@
+// src/components/NodeCanvas.jsx
 import React, { useState } from "react";
 import Draggable from "react-draggable";
-import Xarrow from "react-xarrows";
 
 const NodeCanvas = () => {
   const [nodes, setNodes] = useState([]);
-  const [connections, setConnections] = useState([]);
-  const [dragFrom, setDragFrom] = useState(null);
+  const [edges, setEdges] = useState([]);
+  const [nodeId, setNodeId] = useState(1);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   const addNode = () => {
-    const id = "node-" + (nodes.length + 1);
     const newNode = {
-      id,
-      title: "Node " + (nodes.length + 1),
-      x: 100 + nodes.length * 50,
-      y: 100 + nodes.length * 50,
+      id: nodeId,
+      label: `Node ${nodeId}`,
+      x: 100 + nodes.length * 60,
+      y: 100 + nodes.length * 60,
     };
     setNodes([...nodes, newNode]);
+    setNodeId(nodeId + 1);
   };
 
-  const updatePosition = (id, x, y) => {
-    setNodes(nodes.map(n => n.id === id ? { ...n, x, y } : n));
+  const deleteNode = (id) => {
+    setNodes(nodes.filter((node) => node.id !== id));
+    setEdges(edges.filter((edge) => edge.source !== id && edge.target !== id));
   };
 
-  const handleStartConnection = (id) => {
-    setDragFrom(id);
+  const updateNodePosition = (id, x, y) => {
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.id === id ? { ...node, x, y } : node
+      )
+    );
   };
 
-  const handleDropConnection = (targetId) => {
-    if (dragFrom && dragFrom !== targetId) {
-      setConnections([...connections, { from: dragFrom, to: targetId }]);
+  const handleNodeClick = (id) => {
+    if (selectedNode === null) {
+      setSelectedNode(id);
+    } else if (selectedNode === id) {
+      setSelectedNode(null); // unselect
+    } else {
+      setEdges([...edges, { source: selectedNode, target: id }]);
+      setSelectedNode(null);
     }
-    setDragFrom(null);
+  };
+
+  const renameNode = (id, newLabel) => {
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.id === id ? { ...node, label: newLabel } : node
+      )
+    );
   };
 
   return (
-    <div>
+    <div className="p-4">
       <button
         onClick={addNode}
-        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded shadow"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mb-4"
       >
         Add Node
       </button>
-      <div className="relative w-full h-[80vh] bg-white border rounded">
-        {nodes.map(node => (
+
+      <div className="relative w-full h-[600px] border rounded bg-white">
+        {/* SVG for edges */}
+        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none">
+          {edges.map((edge, index) => {
+            const source = nodes.find((n) => n.id === edge.source);
+            const target = nodes.find((n) => n.id === edge.target);
+            if (!source || !target) return null;
+            return (
+              <line
+                key={index}
+                x1={source.x + 72 / 2}
+                y1={source.y + 64 / 2}
+                x2={target.x + 72 / 2}
+                y2={target.y + 64 / 2}
+                stroke="black"
+                strokeWidth="2"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Nodes */}
+        {nodes.map((node) => (
           <Draggable
             key={node.id}
-            position={{ x: node.x, y: node.y }}
-            onStop={(_, data) => updatePosition(node.id, data.x, data.y)}
+            defaultPosition={{ x: node.x, y: node.y }}
+            onStop={(_, data) =>
+              updateNodePosition(node.id, data.x, data.y)
+            }
           >
             <div
-              id={node.id}
-              className="absolute p-2 bg-green-300 rounded shadow cursor-move select-none"
-              onClick={() => handleDropConnection(node.id)}
+              onClick={() => handleNodeClick(node.id)}
+              className={`absolute w-36 p-4 rounded shadow ${
+                selectedNode === node.id ? "bg-yellow-300" : "bg-green-300"
+              }`}
+              style={{ cursor: "move" }}
             >
-              <div className="flex items-center justify-between gap-2">
-                <strong>{node.title}</strong>
+              <div className="flex justify-between items-center">
+                <strong>{node.label}</strong>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setNodes(nodes.filter(n => n.id !== node.id));
-                    setConnections(connections.filter(
-                      c => c.from !== node.id && c.to !== node.id
-                    ));
+                    deleteNode(node.id);
                   }}
                   className="text-red-600 font-bold"
                 >
                   ×
                 </button>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartConnection(node.id);
-                }}
-                className="mt-1 px-2 py-1 bg-blue-600 text-white rounded text-xs"
-              >
-                Connect →
-              </button>
+              <input
+                type="text"
+                className="mt-2 p-1 w-full text-sm rounded"
+                value={node.label}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => renameNode(node.id, e.target.value)}
+              />
             </div>
           </Draggable>
-        ))}
-        {connections.map((conn, index) => (
-          <Xarrow
-            key={index}
-            start={conn.from}
-            end={conn.to}
-            path="smooth"
-            strokeWidth={2}
-            color="black"
-          />
         ))}
       </div>
     </div>

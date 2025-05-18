@@ -1,5 +1,8 @@
 body {
-  font-family: sans-serif;
   margin: 0;
-  background: #f3f4f6;
+  font-family: sans-serif;
+}
+
+button:focus {
+  outline: none;
 }
